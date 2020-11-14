@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include "Vector2D.h"
+#include <SDL_mixer.h>
 
 class AssetManager;
 class ColliderComponent;
@@ -23,11 +24,15 @@ public:
 	void render();
 	void clean();
 
-	void Repeat(); 
-
+	void Reset();
+	void carrying();
 	void shadowInit();
+
+	bool isColWithBox(); 
+
+	static bool isCarry;
+	static bool cheat;
 	static void playerRewind();
-	void kickBox();
 	static SDL_Renderer* renderer;
 	static SDL_Event event;
 	static bool isRunning;
@@ -49,9 +54,12 @@ public:
 	float shaTimer; 
 	bool isRewinding; 
 	int isOpenDoor; 
+	int TRY; 
+
 
 private:
 	
 	int cnt = 0;
 	SDL_Window* window;
+	Mix_Music* gMusic;
 };

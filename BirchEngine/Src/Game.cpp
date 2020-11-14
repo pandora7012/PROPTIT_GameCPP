@@ -7,6 +7,9 @@
 #include "AssetManager.h"
 #include <sstream>
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <SDL_mixer.h>
 #undef main
 
 
@@ -21,6 +24,8 @@ SDL_Rect Game::camera = { 0,0,800,640 };
 AssetManager* Game::assets = new AssetManager(&manager);
 
 bool Game::isRunning = false;
+bool Game::isCarry = false; 
+bool Game::cheat = false; 
 
 auto& player(manager.addEntity());
 auto& label(manager.addEntity());
@@ -29,6 +34,9 @@ auto& box1(manager.addEntity());
 auto& door(manager.addEntity());
 auto& doorOpen(manager.addEntity());
 auto& doorFull(manager.addEntity());
+auto& textTry(manager.addEntity());
+auto& textQuit(manager.addEntity());
+auto& hiddenText(manager.addEntity());
 
 
 Game::Game()
@@ -37,15 +45,17 @@ Game::Game()
 Game::~Game()
 {}
 
-bool isKicking = 0;
-
 void Game::init(const char* title, int width, int height, bool fullscreen)
 {
-	shaTimer = 0; 
+	shaTimer = 0;
 	int flags = 0;
 	isRewinding = false;
 	isOpenDoor = 5; 
-	
+
+	std::fstream f;
+	f.open("input.txt", std::ios::in);
+	f >> TRY;
+	f.close();
 
 	if (fullscreen)
 	{
@@ -60,9 +70,20 @@ void Game::init(const char* title, int width, int height, bool fullscreen)
 		{
 			SDL_SetRenderDrawColor(renderer, 45, 20, 45, 255);
 		}
+		if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0)
+		{
+			printf("SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError());
+		}
 
+		gMusic = Mix_LoadMUS("assets/pk.wav");
+		if (gMusic == NULL)
+		{
+			printf("Failed to load beat music! SDL_mixer Error: %s\n", Mix_GetError());
+		}
 		isRunning = true;
 	}
+	
+
 
 	if (TTF_Init() == -1)
 	{
@@ -86,7 +107,8 @@ void Game::init(const char* title, int width, int height, bool fullscreen)
 	assets->AddTexture("door_open", "assets/door_anim.png");
 	assets->AddTexture("door_fully", "assets/door_fullyopen.png");
 
-	assets->AddFont("arial", "assets/arial.ttf", 16);
+	assets->AddFont("arial", "assets/arial.ttf", 10);
+	assets->AddFont("snig", "assets/snig-re.ttf", 24);
 
 	map = new Map("terrain", 2, 16);
 	//ecs implementation
@@ -107,13 +129,14 @@ void Game::init(const char* title, int width, int height, bool fullscreen)
 	doorFull.addComponent<SpriteComponent>("door_fully", false);
 	doorFull.addComponent<ColliderComponent>("door");
 	SDL_Color white = { 155, 155, 155, 255 };
+	SDL_Color red = { 255,0,17,105 };
 
-	doorOpen.addComponent<TransformComponent>(1050.f, 10.f, 32, 32, 3);
-	doorOpen.addComponent<SpriteComponent>("door_open", true);
-	doorOpen.getComponent<SpriteComponent>().Play("OPEN");
-	doorOpen.addComponent<ColliderComponent>("door");
 
-	label.addComponent<UILabel>(10, 10, "Test String", "arial", white);
+	label.addComponent<UILabel>(10, 10, "Test String", "snig", white);
+	textQuit.addComponent<UILabel>(700, 600, "Press ESC to Quit", "arial", red);
+	textTry.addComponent<UILabel>(700, 10, "", "snig", red);
+	hiddenText.addComponent<UILabel>(400,300, "CHEAT MODE", "snig", red);
+	
 
 	shadow.addComponent<TransformComponent>(100.0f, 110.0f, 16, 16, 3);
 	shadow.addComponent<SpriteComponent>("idle");
@@ -128,10 +151,9 @@ void Game::init(const char* title, int width, int height, bool fullscreen)
 	assets->CreateKey(Vector2D(100., 750.f), "key");
 	assets->CreateKey(Vector2D(740, 400), "key"); 
 	assets->CreateKey(Vector2D(610, 255), "key");
+	assets->CreateKey(Vector2D(740, 255), "key");
 	
-
-
-	
+	Mix_PlayMusic(gMusic, -1);
 }
 
 //float kickTimer = 0; 
@@ -158,18 +180,19 @@ void Game::handleEvents()
 	}
 }
 
-float kickTimer = 0; 
+float kickTimer = 4; 
 float bulletRes = 0; 
 float stopTimer = 0;
 float openAnim = 0; 
 
 void Game::update()
 {
-
 	// Timer, respawn 
 
+	carrying();
+
 	bulletRes++;
-	if (bulletRes > 30 && stopTimer < 40)
+	if (bulletRes > 20 && stopTimer < 40)
 	{
 		assets->CreateBullet(Vector2D(350.f, 450.f), Vector2D(0, 2), "bullet");
 		assets->CreateBullet(Vector2D(35, 670), Vector2D(2, 0), "bullet");
@@ -179,6 +202,7 @@ void Game::update()
 		
 		bulletRes = 0;
 	}
+
 
 	shaTimer++;
 	if (shaTimer > 500)
@@ -198,18 +222,37 @@ void Game::update()
 
 	std::stringstream ss;
 	ss << "Key remaining: " << isOpenDoor;
-	label.getComponent<UILabel>().SetLabelText(ss.str(), "arial");
+	label.getComponent<UILabel>().SetLabelText(ss.str(), "snig");
 
-	if (isOpenDoor == 0 && openAnim < 40)
+
+	std::stringstream aa; 
+	aa << "Try: " << TRY; 
+	textTry.getComponent<UILabel>().SetLabelText(aa.str(), "snig");
+
+	
+
+	if (isOpenDoor == 0)
+	{
+		if (isOpenDoor == 0 && openAnim ==0 ) {
+			doorOpen.addComponent<TransformComponent>(1050.f, 10.f, 32, 32, 3);
+			doorOpen.addComponent<SpriteComponent>("door_open", true);
+			doorOpen.getComponent<SpriteComponent>().Play("OPEN");
+			doorOpen.addComponent<ColliderComponent>("door");
+		}
+		openAnim++;
+	}
+
+	if (isOpenDoor == 0 && openAnim < 115)
 	{
 		openAnim++; 
 		camera.x = static_cast<int>(doorOpen.getComponent<TransformComponent>().position.x - 350);
 		camera.y = static_cast<int>(doorOpen.getComponent<TransformComponent>().position.y - 250);
 		door.destroy();
 	}
-	if (openAnim > 50)
+	if (openAnim > 115)
 	{
-		doorOpen.destroy();
+		doorOpen.getComponent<SpriteComponent>().setTex("door_fully");
+		doorOpen.getComponent<SpriteComponent>().Play("FullOpen");
 	}
 
 	manager.refresh();
@@ -232,20 +275,37 @@ void Game::update()
 		SDL_Rect bCol = b->getComponent<ColliderComponent>().collider;
 		if (Collision::AABB(playerCol, bCol))
 		{
+			bool e = player.getComponent<KeyboardController>().eIsPress;
 			Vector2D boxPos = b->getComponent<TransformComponent>().position; 
-			
 			if (playerPos.x <= boxPos.x)
 			{
 				if (playerVel.x == 0 && playerVel.y == 1 && playerPos.y < boxPos.y)
 				{
-					b->getComponent<TransformComponent>().velocity = Vector2D(0, 1);
+					if (e)
+					{
+						while (b->getComponent<TransformComponent>().position.y < boxPos.y + 70)
+							b->getComponent<TransformComponent>().position.y++;
+					}
+						b->getComponent<TransformComponent>().velocity = Vector2D(0, 1);
 				}
+
 				else if (playerVel.x == 1 && playerVel.y == 0)
 				{
+					if (e)
+					{
+						while (b->getComponent<TransformComponent>().position.x < boxPos.x + 70)
+							b->getComponent<TransformComponent>().position.x++;
+					}
 					b->getComponent<TransformComponent>().velocity = Vector2D(1, 0);
 				}
+
 				else if (playerVel.x == 0 && playerVel.y == -1 && playerPos.y > boxPos.y)
 				{
+					if (e)
+					{
+						while (b->getComponent<TransformComponent>().position.y > boxPos.y - 70)
+							b->getComponent<TransformComponent>().position.y--;
+					}
 					b->getComponent<TransformComponent>().velocity = Vector2D(0, -1);
 				}
 			}
@@ -253,14 +313,29 @@ void Game::update()
 			{
 				if (playerVel.x == -1 && playerVel.y == 0 )
 				{
+					if (e)
+					{
+						while (b->getComponent<TransformComponent>().position.x > boxPos.x - 70)
+							b->getComponent<TransformComponent>().position.x--; 
+					}
 					b->getComponent<TransformComponent>().velocity = Vector2D(-1, 0);
 				}
 				else if (playerVel.x == 0 && playerVel.y == 1 && playerPos.y < boxPos.y)
 				{
+					if (e)
+					{
+						while (b->getComponent<TransformComponent>().position.y < boxPos.y + 70)
+							b->getComponent<TransformComponent>().position.y++;
+					}
 					b->getComponent<TransformComponent>().velocity = Vector2D(0, 1);
 				}
 				else if (playerVel.x == 0 && playerVel.y == -1 && playerPos.y > boxPos.y)
 				{
+					if (e)
+					{
+						while (b->getComponent<TransformComponent>().position.y > boxPos.y - 70)
+							b->getComponent<TransformComponent>().position.y--;
+					}
 					b->getComponent<TransformComponent>().velocity = Vector2D(0, -1);
 				}
 			}
@@ -285,6 +360,8 @@ void Game::update()
 		}
 		
 	}
+
+	
 
 	for (auto& k : keys)
 	{
@@ -323,8 +400,16 @@ void Game::update()
 			}
 		}
 	}
+
+	for (auto& b : bullets)
+	{
+		if (Collision::AABB(b->getComponent<ColliderComponent>().collider, playerCol))
+		{
+			if (!cheat )
+				Reset();
+		}
+	}
 	
-	Repeat();
 
 	//camera follower 
 
@@ -340,6 +425,11 @@ void Game::update()
 	if (camera.y > camera.h)
 		camera.y = camera.h;
 
+
+	std::fstream f; 
+	f.open("input.txt", std::ios::out);
+	f << TRY;
+	f.close();
 
 	// bebug 
 
@@ -382,21 +472,28 @@ void Game::render()
 	{
 		b->draw();
 	}
-	door.draw();
-	if (isOpenDoor == 0) {
-		if (openAnim <50) doorOpen.draw();
-		if (openAnim > 50) doorFull.draw();
-	}
+	if (isOpenDoor > 0 )door.draw();
+	
+	if (isOpenDoor == 0) doorOpen.draw();
 
 	label.draw();
-
+	textQuit.draw();
+	textTry.draw();
+	if (cheat)
+	{
+		hiddenText.draw();
+	}
 	SDL_RenderPresent(renderer);
 }
 
 void Game::clean()
 {
+	Mix_FreeMusic(gMusic);
+	gMusic = NULL;
+
 	SDL_DestroyWindow(window);
 	SDL_DestroyRenderer(renderer);
+	Mix_Quit();
 	SDL_Quit();
 }
 
@@ -435,40 +532,40 @@ void Game::playerRewind()
 	player.getComponent<SpriteComponent>().spriteFlip = shadow.getComponent<SpriteComponent>().spriteFlip; 
 }
 
-void Game::kickBox()
+
+void Game::Reset()
 {
-	if (event.type == SDL_KEYDOWN)
+	player.getComponent<TransformComponent>().position = Vector2D(100.0f, 100.0f);
+	box1.getComponent<TransformComponent>().position = Vector2D(100, 150);
+	shadow.getComponent<TransformComponent>().position = Vector2D(100.0f, 100.0f);
+	for (auto& b : keys)
 	{
-		switch (Game::event.key.keysym.sym)
-		{
-		case SDLK_SPACE:
-			if (!isKicking)
-			{
-				isKicking = true;
-			}
-			break;
-		}
+		b->destroy();
 	}
-	if (event.type == SDL_KEYUP)
+
+	isOpenDoor = 5;
+	assets->CreateKey(Vector2D(460.f, 500.f), "key");
+	assets->CreateKey(Vector2D(100., 750.f), "key");
+	assets->CreateKey(Vector2D(740, 400), "key");
+	assets->CreateKey(Vector2D(610, 255), "key");
+	assets->CreateKey(Vector2D(740, 255), "key");
+	TRY++; 
+}
+
+
+void Game::carrying()
+{
+	if (isCarry)
 	{
-		switch (Game::event.key.keysym.sym)
-		{
-		case SDLK_SPACE:
-			if (kickTimer == 0)
-			{
-				isKicking = false;
-			}
-			break;
-		}
+		box1.getComponent<TransformComponent>().position = player.getComponent<TransformComponent>().position + Vector2D(5, 5);
 	}
 }
 
-void Game::Repeat()
+bool Game::isColWithBox()
 {
-	shaTimer = 0;
-	int flags = 0;
-	isRewinding = false;
-	isOpenDoor = 5;
-
-
+	if (Collision::AABB(player.getComponent<ColliderComponent>().collider, box1.getComponent<ColliderComponent>().collider))
+	{
+		return true;
+	}
+	else return false;
 }

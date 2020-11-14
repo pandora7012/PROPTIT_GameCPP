@@ -41,11 +41,13 @@ public:
 		Animation walk = Animation(1, 6, 50);
 		Animation keyidle = Animation(0, 4, 150);
 		Animation open = Animation(0, 14, 100);
+		Animation fullopen = Animation(0, 1, 100);
 
 		animations.emplace("Idle", idle);
 		animations.emplace("Walk", walk);
 		animations.emplace("Keyidle", keyidle);
 		animations.emplace("OPEN", open);
+		animations.emplace("FullOpen", fullopen);
 
 		Play("Idle");
 

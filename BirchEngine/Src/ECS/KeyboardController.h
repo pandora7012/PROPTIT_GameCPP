@@ -12,7 +12,9 @@ public:
 	int plaState = 0; 
 	bool flipCheck = false; 
 	bool isPress = 0; 
+	char nearlyPress = NULL; 
 	bool eIsPress = 0; 
+	bool battu = 0; 
 
 	void init() override
 	{
@@ -20,19 +22,24 @@ public:
 		sprite = &entity->getComponent<SpriteComponent>();
 	}
 
-
 	void update() override
 	{
+		
 		if (Game::event.type == SDL_KEYDOWN )
 		{
 			switch (Game::event.key.keysym.sym)
 			{
 			case SDLK_w:
+				if (Game::isCarry)
+					nearlyPress = 'w';
 				transform->velocity.y = -1;
 				sprite->Play("Walk");
 				plaState = 1; 
 				break;
 			case SDLK_a:
+				if (Game::isCarry)
+					nearlyPress = 'a';
+
 				transform->velocity.x = -1;
 				sprite->Play("Walk");
 				plaState = 1;
@@ -43,6 +50,9 @@ public:
 				flipCheck = 1;
 				break;
 			case SDLK_d:
+				if (Game::isCarry)
+					nearlyPress = 'd';
+
 				transform->velocity.x = 1;
 				sprite->Play("Walk");
 				plaState = 1; 
@@ -50,6 +60,9 @@ public:
 				flipCheck = 0; 
 				break;
 			case SDLK_s:
+				if (Game::isCarry )
+					nearlyPress = 's';
+
 				transform->velocity.y = 1;
 				sprite->Play("Walk");
 				plaState = 1; 
@@ -60,6 +73,26 @@ public:
 					Game::playerRewind();
 					isPress = true;
 				}
+				break;
+			case SDLK_e:
+			{
+				if (!eIsPress)
+				{
+					eIsPress = true;
+				}
+				break;
+			}
+
+			case SDLK_0:
+			{
+				if (!Game::cheat)
+				{
+					Game::cheat = true;
+				}
+				else
+					Game::cheat = false;
+				break;
+			}
 			default:
 				break;
 			}
@@ -91,7 +124,10 @@ public:
 				break;
 			case SDLK_r:
 				isPress = false; 
-				break; 
+				break;
+			case SDLK_e:
+				eIsPress = false;
+				break;
 			case SDLK_ESCAPE:
 				Game::isRunning = false;
 			default:
