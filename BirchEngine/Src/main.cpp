@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
 	int frameTime;
 
 	game = new Game();
-	game->init("Game", 800, 640, false);
+	game->init("ESCAPE", 800, 640, false);
 	
 	while (game->running())
 	{
