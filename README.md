@@ -1,5 +1,5 @@
 Ý tưởng:
-  Người chơi di chuyển nhân vật vượt qua các chướng ngại vật, thu thập chìa khóa để mở cửa qua màn tiếp theo.
+Người chơi di chuyển nhân vật vượt qua các chướng ngại vật, thu thập chìa khóa để mở cửa qua màn tiếp theo.
 Cách chơi:
   Sử dụng phím A,S,D,W để di chuyển vị trí của nhân vật.
   Có thể sử dụng hộp để có thể che chắn đạn.
@@ -27,5 +27,5 @@ Manager : Quản lý , phân loại object.
 Component: Định nghĩa chung về thành phần của object.
 
 Hàm core:
-	Map: Sinh map từ assets:
-	Hàm map sẽ load 1 file ở bên ngoài là 1 ma trận số nguyên (M x N). Từ file đấy sẽ hiển thị trên game theo assets được được cắt ra theo số pixel được định sẵn.
+Map: Sinh map từ assets:
+Hàm map sẽ load 1 file ở bên ngoài là 1 ma trận số nguyên (M x N). Từ file đấy sẽ hiển thị trên game theo assets được được cắt ra theo số pixel được định sẵn.
